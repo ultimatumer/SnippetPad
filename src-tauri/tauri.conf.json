@@ -31,6 +31,15 @@
       "iconAsTemplate": false
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "RWQ+aHrep9xFhIiJJ4f/3l8NNgWwym1Bw4YafuFetuWYAZb1/Pzux+5i",
+      "endpoints": [
+        "https://github.com/ultimatumer/SnippetPad/releases/latest/download/latest.json"
+      ],
+      "dialog": false
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

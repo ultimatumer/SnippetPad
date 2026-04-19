@@ -17,7 +17,7 @@ jobs:
           - platform: windows-latest
             args: ''
           - platform: macos-latest
-            args: '--target universal-apple-darwin'  # один dmg для всех Mac (M1/M2/M3 + Intel)
+            args: '--target universal-apple-darwin'
 
     runs-on: ${{ matrix.platform }}
 
@@ -47,6 +47,9 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Ключи подписи для автообновления
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'SnippetPad ${{ github.ref_name }}'
@@ -56,7 +59,10 @@ jobs:
             | ОС | Файл |
             |----|------|
             | Windows | `*_x64_en-US.msi` или `*_x64-setup.exe` |
-            | macOS (все Mac: M1/M2/M3 и Intel) | `*_universal.dmg` |
+            | macOS (M1/M2/M3 и Intel) | `*_universal.dmg` |
+
+            > Если уже установлен SnippetPad — обновление применится автоматически при следующем запуске.
           releaseDraft: false
           prerelease: false
+          updaterJsonKeepUniversal: true
           args: ${{ matrix.args }}

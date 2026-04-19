@@ -52,12 +52,13 @@ fn normalize_hotkey(hk: &str) -> String {
     let Some(plus) = hk.find('+') else { return hk.to_string() };
     let modifier = &hk[..plus];
     let key      = &hk[plus+1..];
-    let mod_norm = match modifier.to_uppercase().as_str() {
-        "CTRL"  | "CONTROL" => "Ctrl",
-        "ALT"               => "Alt",
-        "SHIFT"             => "Shift",
-        "META"  | "WIN" | "SUPER" | "CMD" => "Super",
-        other               => other,
+    let upper    = modifier.to_uppercase();
+    let mod_norm = match upper.as_str() {
+        "CTRL"  | "CONTROL"              => "Ctrl",
+        "ALT"                            => "Alt",
+        "SHIFT"                          => "Shift",
+        "META" | "WIN" | "SUPER" | "CMD" => "Super",
+        other                            => other,
     };
     format!("{mod_norm}+{key}")
 }
@@ -219,6 +220,8 @@ fn setup_tray(app: &mut tauri::App) -> tauri::Result<()> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .setup(|app| {

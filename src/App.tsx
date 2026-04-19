@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
 import { Snippet } from "./types";
 import { BindEditor } from "./components/BindEditor";
 import { HotkeyBadges } from "./components/KeyBadge";
 import { hotkeyDisplay } from "./utils/hotkey";
 
 export default function App() {
-  const [snippets, setSnippets] = useState<Snippet[]>([]);
-  const [editing, setEditing]   = useState<Snippet | null | "new">(undefined as unknown as null);
-  const [isOpen, setIsOpen]     = useState(false);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState("");
+  const [snippets, setSnippets]   = useState<Snippet[]>([]);
+  const [editing, setEditing]     = useState<Snippet | null | "new">(undefined as unknown as null);
+  const [isOpen, setIsOpen]       = useState(false);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState("");
+  const [updateInfo, setUpdateInfo] = useState<{ version: string; download: () => Promise<void> } | null>(null);
+  const [updating, setUpdating]   = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -24,6 +28,22 @@ export default function App() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Check for updates on startup (silently ignore errors in dev/browser)
+  useEffect(() => {
+    check().then((update) => {
+      if (update?.available) {
+        setUpdateInfo({
+          version: update.version,
+          download: async () => {
+            setUpdating(true);
+            await update.downloadAndInstall();
+            await relaunch();
+          },
+        });
+      }
+    }).catch(() => {});
+  }, []);
 
   const openNew  = () => { setEditing(null); setIsOpen(true); };
   const openEdit = (s: Snippet) => { setEditing(s); setIsOpen(true); };
@@ -79,6 +99,22 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {/* Update banner */}
+      {updateInfo && (
+        <div className="mx-6 mt-4 px-4 py-2.5 rounded-lg bg-ph-accent-subtle border border-ph-accent/40 flex items-center justify-between">
+          <span className="text-ph-text text-sm">
+            Доступна версия <span className="font-semibold text-ph-accent">{updateInfo.version}</span>
+          </span>
+          <button
+            onClick={updateInfo.download}
+            disabled={updating}
+            className="px-4 py-1.5 rounded-md bg-ph-accent hover:bg-ph-accent-hover text-white text-sm font-semibold transition-colors disabled:opacity-60"
+          >
+            {updating ? "Устанавливаю…" : "Обновить"}
+          </button>
+        </div>
+      )}
 
       {/* Error banner */}
       {error && (
