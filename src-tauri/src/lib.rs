@@ -47,6 +47,21 @@ fn persist(app: &AppHandle, snippets: &[Snippet]) {
 
 // ── Shortcut registration ──────────────────────────────────────────────────
 
+/// Convert our stored format "ALT+Digit1" → "Alt+Digit1" (title-case modifier).
+fn normalize_hotkey(hk: &str) -> String {
+    let Some(plus) = hk.find('+') else { return hk.to_string() };
+    let modifier = &hk[..plus];
+    let key      = &hk[plus+1..];
+    let mod_norm = match modifier.to_uppercase().as_str() {
+        "CTRL"  | "CONTROL" => "Ctrl",
+        "ALT"               => "Alt",
+        "SHIFT"             => "Shift",
+        "META"  | "WIN" | "SUPER" | "CMD" => "Super",
+        other               => other,
+    };
+    format!("{mod_norm}+{key}")
+}
+
 fn re_register(app: &AppHandle, snippets: &[Snippet]) {
     let gsc = app.global_shortcut();
     let _ = gsc.unregister_all();
@@ -57,7 +72,7 @@ fn re_register(app: &AppHandle, snippets: &[Snippet]) {
         }
         let text   = snip.text.clone();
         let app2   = app.clone();
-        let hotkey = snip.hotkey.clone();
+        let hotkey = normalize_hotkey(&snip.hotkey);
 
         if let Err(e) = gsc.on_shortcut(hotkey.as_str(), move |_app, _sc, event| {
             if event.state() == ShortcutState::Pressed {
