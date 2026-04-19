@@ -5,7 +5,6 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Manager, State, WindowEvent,
 };
-use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -75,9 +74,9 @@ fn re_register(app: &AppHandle, snippets: &[Snippet]) {
         let app2   = app.clone();
         let hotkey = normalize_hotkey(&snip.hotkey);
 
-        if let Err(e) = gsc.on_shortcut(hotkey.as_str(), move |_app, _sc, event| {
+        if let Err(e) = gsc.on_shortcut(hotkey.as_str(), move |_app, sc, event| {
             if event.state() == ShortcutState::Pressed {
-                paste_text(&app2, &text);
+                type_text(&app2, &text, sc);
             }
         }) {
             eprintln!("Failed to register shortcut {hotkey}: {e}");
@@ -85,36 +84,45 @@ fn re_register(app: &AppHandle, snippets: &[Snippet]) {
     }
 }
 
-// ── Paste ──────────────────────────────────────────────────────────────────
+// ── Direct typing ──────────────────────────────────────────────────────────
 
-fn paste_text(app: &AppHandle, text: &str) {
-    // Write to system clipboard
-    if let Err(e) = app.clipboard().write_text(text) {
-        eprintln!("Clipboard write failed: {e}");
-        return;
-    }
-
-    // Small pause so target app can process the clipboard write
-    std::thread::sleep(std::time::Duration::from_millis(80));
-
-    // Simulate Ctrl+V (or Cmd+V on macOS)
+fn type_text(
+    _app: &AppHandle,
+    text: &str,
+    shortcut: &tauri_plugin_global_shortcut::Shortcut,
+) {
     use enigo::{Direction, Enigo, Key, Keyboard, Settings};
     match Enigo::new(&Settings::default()) {
         Ok(mut enigo) => {
-            #[cfg(target_os = "macos")]
-            {
-                let _ = enigo.key(Key::Meta,      Direction::Press);
-                let _ = enigo.key(Key::Unicode('v'), Direction::Click);
-                let _ = enigo.key(Key::Meta,      Direction::Release);
-            }
-            #[cfg(not(target_os = "macos"))]
-            {
-                let _ = enigo.key(Key::Control,      Direction::Press);
-                let _ = enigo.key(Key::Unicode('v'), Direction::Click);
-                let _ = enigo.key(Key::Control,      Direction::Release);
+            release_shortcut_modifiers(&mut enigo, shortcut);
+            std::thread::sleep(std::time::Duration::from_millis(10));
+
+            if let Err(e) = enigo.text(text) {
+                eprintln!("Text input failed: {e}");
             }
         }
         Err(e) => eprintln!("Enigo init failed: {e}"),
+    }
+}
+
+fn release_shortcut_modifiers(
+    enigo: &mut enigo::Enigo,
+    shortcut: &tauri_plugin_global_shortcut::Shortcut,
+) {
+    use enigo::{Direction, Key, Keyboard};
+    use tauri_plugin_global_shortcut::Modifiers;
+
+    if shortcut.mods.contains(Modifiers::ALT) {
+        let _ = enigo.key(Key::Alt, Direction::Release);
+    }
+    if shortcut.mods.contains(Modifiers::SHIFT) {
+        let _ = enigo.key(Key::Shift, Direction::Release);
+    }
+    if shortcut.mods.contains(Modifiers::CONTROL) {
+        let _ = enigo.key(Key::Control, Direction::Release);
+    }
+    if shortcut.mods.contains(Modifiers::SUPER) {
+        let _ = enigo.key(Key::Meta, Direction::Release);
     }
 }
 
