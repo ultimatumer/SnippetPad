@@ -1,12 +1,29 @@
 export const MODIFIERS = ["CTRL", "ALT", "SHIFT", "META"] as const;
 export type Modifier = (typeof MODIFIERS)[number];
 
-export const MODIFIER_DISPLAY: Record<Modifier, string> = {
+const DEFAULT_MODIFIER_DISPLAY: Record<Modifier, string> = {
   CTRL: "Ctrl",
   ALT: "Alt",
   SHIFT: "Shift",
   META: "Win / Cmd",
 };
+
+const MAC_MODIFIER_DISPLAY: Record<Modifier, string> = {
+  CTRL: "Control",
+  ALT: "Option",
+  SHIFT: "Shift⇧",
+  META: "Command",
+};
+
+export function isMacPlatform(): boolean {
+  return typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
+}
+
+export function getModifierDisplayMap(): Record<Modifier, string> {
+  return isMacPlatform() ? MAC_MODIFIER_DISPLAY : DEFAULT_MODIFIER_DISPLAY;
+}
+
+export const MODIFIER_DISPLAY: Record<Modifier, string> = getModifierDisplayMap();
 
 export function parseHotkey(hk: string): { modifier: string; key: string } {
   if (!hk) return { modifier: "", key: "" };
@@ -24,7 +41,8 @@ export function buildHotkey(modifier: string, key: string): string {
 
 export function hotkeyDisplay(hk: string): { modifier: string; key: string } {
   const { modifier, key } = parseHotkey(hk);
-  const modLabel = MODIFIER_DISPLAY[modifier as Modifier] ?? modifier;
+  const modifierDisplay = getModifierDisplayMap();
+  const modLabel = modifierDisplay[modifier as Modifier] ?? modifier;
   return { modifier: modLabel, key: codeToDisplay(key) };
 }
 

@@ -6,7 +6,9 @@ import {
   MODIFIERS,
   buildHotkey,
   eventModifier,
+  getModifierDisplayMap,
   isModifierKey,
+  isMacPlatform,
   normalizeKey,
   parseHotkey,
 } from "../utils/hotkey";
@@ -21,36 +23,44 @@ interface Props {
 
 type CaptureMode = "idle" | "capturing";
 
-const UI = {
-  modifierRequired: "\u041d\u0443\u0436\u0435\u043d \u043c\u043e\u0434\u0438\u0444\u0438\u043a\u0430\u0442\u043e\u0440: Ctrl, Alt, Shift \u0438\u043b\u0438 Win",
-  chooseHotkey: "\u0412\u044b\u0431\u0435\u0440\u0438 \u0441\u043e\u0447\u0435\u0442\u0430\u043d\u0438\u0435 \u043a\u043b\u0430\u0432\u0438\u0448",
-  fillTemplate: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438 \u0442\u0435\u043a\u0441\u0442 \u0448\u0430\u0431\u043b\u043e\u043d\u0430",
-  duplicateHotkey: "\u042d\u0442\u043e\u0442 \u0445\u043e\u0442\u043a\u0435\u0439 \u0443\u0436\u0435 \u0437\u0430\u043d\u044f\u0442",
-  newBind: "\u041d\u043e\u0432\u044b\u0439 \u0431\u0438\u043d\u0434",
-  editBind: "\u0420\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0431\u0438\u043d\u0434",
-  hotkeyLabel: "\u041a\u043e\u043c\u0431\u0438\u043d\u0430\u0446\u0438\u044f \u043a\u043b\u0430\u0432\u0438\u0448",
-  pressCombo: "\u041d\u0430\u0436\u043c\u0438 \u043a\u043e\u043c\u0431\u0438\u043d\u0430\u0446\u0438\u044e\u2026 (Esc \u2014 \u043e\u0442\u043c\u0435\u043d\u0430)",
-  modPlaceholder: "\u2014 \u043c\u043e\u0434 \u2014",
-  keyPlaceholder: "\u043a\u043b\u0430\u0432\u0438\u0448\u0430\u2026",
-  or: "\u0438\u043b\u0438",
-  captureFull: "\u0417\u0430\u0445\u0432\u0430\u0442\u0438\u0442\u044c \u0446\u0435\u043b\u0438\u043a\u043e\u043c",
-  textLabel: "\u0422\u0435\u043a\u0441\u0442 \u0448\u0430\u0431\u043b\u043e\u043d\u0430",
-  textPlaceholder:
-    "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u043a\u0441\u0442 \u0434\u043b\u044f \u0432\u0441\u0442\u0430\u0432\u043a\u0438\u2026 \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044e\u0442\u0441\u044f \u044d\u043c\u043e\u0434\u0437\u0438 \ud83c\udf89 \u0438 \u043f\u0435\u0440\u0435\u043d\u043e\u0441\u044b \u0441\u0442\u0440\u043e\u043a",
-  charsSuffix: "\u0441\u0438\u043c\u0432\u043e\u043b\u043e\u0432 \u00b7 Enter = \u043f\u0435\u0440\u0435\u043d\u043e\u0441 \u0441\u0442\u0440\u043e\u043a\u0438",
-  commandLabel: "\u041a\u043e\u043c\u0430\u043d\u0434\u0430",
-  optional: "(\u043e\u043f\u0446\u0438\u043e\u043d\u0430\u043b\u044c\u043d\u043e)",
-  commandPlaceholder: "\u043a\u043e\u043c\u0430\u043d\u0434\u0430",
-  commandHint:
-    "\u041d\u0430\u0431\u0435\u0440\u0438 /\u043a\u043e\u043c\u0430\u043d\u0434\u0430 \u0432 \u043b\u044e\u0431\u043e\u043c \u043f\u043e\u043b\u0435 \u2014 \u0442\u0435\u043a\u0441\u0442 \u0432\u0441\u0442\u0430\u0432\u0438\u0442\u0441\u044f \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438",
-  cancel: "\u041e\u0442\u043c\u0435\u043d\u0430",
-  save: "\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c",
-  close: "\u00d7",
-} as const;
+function getUiText() {
+  const isMac = isMacPlatform();
+  const metaLabel = isMac ? "Command" : "Win";
+  const optionLabel = isMac ? "Option" : "Alt";
+  const controlLabel = isMac ? "Control" : "Ctrl";
+
+  return {
+    modifierRequired: `Нужен модификатор: ${controlLabel}, ${optionLabel}, Shift или ${metaLabel}`,
+    chooseHotkey: "Выбери сочетание клавиш",
+    fillTemplate: "Заполни текст шаблона",
+    duplicateHotkey: "Этот хоткей уже занят",
+    newBind: "Новый бинд",
+    editBind: "Редактировать бинд",
+    hotkeyLabel: "Комбинация клавиш",
+    pressCombo: "Нажми комбинацию… (Esc — отмена)",
+    modPlaceholder: "— мод —",
+    keyPlaceholder: "клавиша…",
+    or: "или",
+    captureFull: "Захватить целиком",
+    textLabel: "Текст шаблона",
+    textPlaceholder: "Введите текст для вставки… Поддерживаются эмодзи 🎉 и переносы строк",
+    charsSuffix: "символов · Enter = перенос строки",
+    commandLabel: "Команда",
+    optional: "(опционально)",
+    commandPlaceholder: "команда",
+    commandHint: "Набери /команда в любом поле — текст вставится автоматически",
+    cancel: "Отмена",
+    save: "Сохранить",
+    close: "×",
+  } as const;
+}
+
+const UI = getUiText();
 
 export function BindEditor({ snippet, existingHotkeys, onSave, onClose }: Props) {
   const isNew = snippet === null;
   const parsed = snippet ? parseHotkey(snippet.hotkey) : { modifier: "", key: "" };
+  const modifierDisplay = getModifierDisplayMap();
 
   const [modifier, setModifier] = useState(parsed.modifier);
   const [key, setKey] = useState(parsed.key);
@@ -132,7 +142,7 @@ export function BindEditor({ snippet, existingHotkeys, onSave, onClose }: Props)
   };
 
   const modDisplay = modifier
-    ? (MODIFIER_DISPLAY[modifier as keyof typeof MODIFIER_DISPLAY] ?? modifier)
+    ? (modifierDisplay[modifier as keyof typeof modifierDisplay] ?? modifier)
     : "";
 
   return (
