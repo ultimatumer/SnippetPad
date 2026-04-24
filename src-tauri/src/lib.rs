@@ -190,12 +190,13 @@ fn paste_text(enigo: &mut enigo::Enigo, text: &str) -> Result<(), String> {
 }
 
 fn press_paste_shortcut(enigo: &mut enigo::Enigo) -> Result<(), enigo::InputError> {
-    use enigo::{Direction, Key, Keyboard};
+    use enigo::{Direction, Keyboard};
 
     let paste_modifier = paste_modifier_key();
+    let paste_key = paste_trigger_key();
 
     enigo.key(paste_modifier, Direction::Press)?;
-    enigo.key(Key::V, Direction::Click)?;
+    enigo.key(paste_key, Direction::Click)?;
     enigo.key(paste_modifier, Direction::Release)
 }
 
@@ -207,6 +208,23 @@ fn paste_modifier_key() -> enigo::Key {
 #[cfg(not(target_os = "macos"))]
 fn paste_modifier_key() -> enigo::Key {
     enigo::Key::Control
+}
+
+#[cfg(target_os = "windows")]
+fn paste_trigger_key() -> enigo::Key {
+    enigo::Key::V
+}
+
+#[cfg(target_os = "macos")]
+fn paste_trigger_key() -> enigo::Key {
+    // kVK_ANSI_V. Using a fixed macOS virtual key avoids layout-dependent
+    // failures when the active keyboard layout is not Latin.
+    enigo::Key::Other(9)
+}
+
+#[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+fn paste_trigger_key() -> enigo::Key {
+    enigo::Key::Unicode('v')
 }
 
 fn release_shortcut_modifiers(

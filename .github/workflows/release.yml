@@ -52,7 +52,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'SnippetPad ${{ github.ref_name }}'
+          releaseName: 'Customer Support Binder ${{ github.ref_name }}'
           releaseBody: |
             ## Установка
 
@@ -61,7 +61,7 @@ jobs:
             | Windows | `*_x64_en-US.msi` или `*_x64-setup.exe` |
             | macOS (M1/M2/M3 и Intel) | `*_universal.dmg` |
 
-            > Если уже установлен SnippetPad — обновление применится автоматически при следующем запуске.
+            > Если уже установлен Customer Support Binder — обновление применится автоматически при следующем запуске.
           releaseDraft: false
           prerelease: false
           updaterJsonKeepUniversal: true
